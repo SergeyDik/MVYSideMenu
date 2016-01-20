@@ -22,6 +22,7 @@
 		_panFromBezel = YES;
 		_panFromNavBar = YES;
         _animationDuration = 0.4f;
+        _openDirection = MVYSideMenuOpenDirectionFromLeft;
     }
     
     return self;
@@ -39,6 +40,7 @@
 	options.shadowOffset = self.shadowOffset;
     options.shadowOpacity = self.shadowOpacity;
     options.shadowRadius = self.shadowRadius;
+    options.openDirection = self.openDirection;
     return options;
 }
 

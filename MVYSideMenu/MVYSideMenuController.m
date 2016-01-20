@@ -62,8 +62,25 @@ typedef struct {
 		_options = options;
 		_menuViewController = menuViewController;
 		_contentViewController = contentViewController;
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(onEnterBackground)
+                                                     name:UIApplicationDidEnterBackgroundNotification
+                                                   object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(onEnterForeground)
+                                                     name:UIApplicationWillEnterForegroundNotification
+                                                   object:nil];
 	}
 	return self;
+}
+
+- (void)onEnterBackground {
+    self.panGesture.enabled = NO;
+}
+
+- (void)onEnterForeground {
+    self.panGesture.enabled = YES;
 }
 
 - (void)viewDidLoad
@@ -96,6 +113,14 @@ typedef struct {
         return [self.contentViewController supportedInterfaceOrientations];
     } else {
         return [super supportedInterfaceOrientations];
+    }
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle {
+    if (self.contentViewController) {
+        return self.contentViewController.preferredStatusBarStyle;
+    } else {
+        return [super preferredStatusBarStyle];
     }
 }
 
@@ -293,7 +318,8 @@ typedef struct {
 			break;
 		}
 			
-		case UIGestureRecognizerStateEnded:{
+		case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:{
 			[self.menuViewController beginAppearanceTransition:!menuWasHiddenAtStartOfPan animated:YES];
 			
 			CGPoint velocity = [panGesture velocityInView:panGesture.view];
@@ -320,54 +346,90 @@ typedef struct {
 	
 	MVYSideMenuPanResultInfo panInfo = {MVYSideMenuClose, NO, 0.0f};
 	
-	panInfo.menuAction = menuOrigin <= pointOfNoReturn ? MVYSideMenuClose : MVYSideMenuOpen;
-	
-	if (velocity.x >= thresholdVelocity) {
-		panInfo.menuAction = MVYSideMenuOpen;
-		panInfo.velocity = velocity.x;
-	} else if (velocity.x <= (-1.0f * thresholdVelocity)) {
-		panInfo.menuAction = MVYSideMenuClose;
-		panInfo.velocity = velocity.x;
-	}
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        panInfo.menuAction = menuOrigin <= pointOfNoReturn ? MVYSideMenuClose : MVYSideMenuOpen;
+        
+        if (velocity.x >= thresholdVelocity) {
+            panInfo.menuAction = MVYSideMenuOpen;
+            panInfo.velocity = velocity.x;
+        } else if (velocity.x <= (-1.0f * thresholdVelocity)) {
+            panInfo.menuAction = MVYSideMenuClose;
+            panInfo.velocity = velocity.x;
+        }
+    } else {
+        panInfo.menuAction = menuOrigin >= pointOfNoReturn ? MVYSideMenuClose : MVYSideMenuOpen;
+        
+        if (velocity.x >= thresholdVelocity) {
+            panInfo.menuAction = MVYSideMenuClose;
+            panInfo.velocity = velocity.x;
+        } else if (velocity.x <= (-1.0f * thresholdVelocity)) {
+            panInfo.menuAction = MVYSideMenuOpen;
+            panInfo.velocity = velocity.x;
+        }
+    }
 	
 	return panInfo;
 }
 
 - (BOOL)isMenuOpen {
-	return self.menuContainerView.frame.origin.x == 0.0f;
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        return (self.menuContainerView.frame.origin.x == 0.0f);
+    } else {
+        return (self.menuContainerView.frame.origin.x == (self.view.bounds.size.width - self.menuContainerView.frame.size.width));
+    }
 }
 
 - (BOOL)isMenuHidden {
-	return self.menuContainerView.frame.origin.x <= [self closedOriginX];
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        return self.menuContainerView.frame.origin.x <= [self closedOriginX];
+    } else {
+        return self.menuContainerView.frame.origin.x >= [self closedOriginX];
+    }
 }
 
 - (CGFloat)closedOriginX {
-	return - self.menuFrame.size.width;
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        return - self.menuFrame.size.width;
+    } else {
+        return self.view.bounds.size.width;
+    }
 }
 
 - (CGRect)applyTranslation:(CGPoint)translation toFrame:(CGRect)frame {
-	
-	CGFloat newOrigin = frame.origin.x;
+    
+    CGFloat newOrigin = frame.origin.x;
     newOrigin += translation.x;
-	
-    CGFloat minOrigin = [self closedOriginX];
-    CGFloat maxOrigin = 0.0f;
+    
+    CGFloat minOrigin;
+    CGFloat maxOrigin;
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        minOrigin = [self closedOriginX];
+        maxOrigin = 0.0f;
+    } else {
+        minOrigin = [self closedOriginX] - self.menuFrame.size.width;
+        maxOrigin = [self closedOriginX];
+    }
+    
     CGRect newFrame = frame;
     
     if (newOrigin < minOrigin) {
-		newOrigin = minOrigin;
+        newOrigin = minOrigin;
     } else if (newOrigin > maxOrigin) {
-		newOrigin = maxOrigin;
+        newOrigin = maxOrigin;
     }
-	
+    
     newFrame.origin.x = newOrigin;
     return newFrame;
 }
 
 - (CGFloat)getOpenedMenuRatio {
-	
-	CGFloat currentPosition = self.menuContainerView.frame.origin.x - [self closedOriginX];
-	return currentPosition / self.menuFrame.size.width;
+    
+    CGFloat currentPosition = self.menuContainerView.frame.origin.x - [self closedOriginX];
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        return currentPosition / self.menuFrame.size.width;
+    } else {
+        return -currentPosition / self.menuFrame.size.width;
+    }
 }
 
 - (void)applyOpacity {
@@ -386,30 +448,35 @@ typedef struct {
 }
 
 - (void)openMenuWithVelocity:(CGFloat)velocity {
-	
-	CGFloat menuXOrigin = self.menuContainerView.frame.origin.x;
-	CGFloat finalXOrigin = 0.0f;
-	
-	CGRect frame = self.menuContainerView.frame;
-	frame.origin.x = finalXOrigin;
-	
-	NSTimeInterval duration;
-	if (velocity == 0.0f) {
-        duration = self.options.animationDuration;        
-	} else {
-		duration = fabs(menuXOrigin - finalXOrigin) / velocity;
-		duration = fmax(0.1, fmin(1.0f, duration));
-	}
-	
-	[self addShadowToMenuView];
-	
-	[UIView animateWithDuration:duration delay:0.0f options:UIViewAnimationOptionCurveEaseInOut animations:^{
-		self.menuContainerView.frame = frame;
-		self.opacityView.layer.opacity = self.options.contentViewOpacity;
-		[self.contentContainerView setTransform:CGAffineTransformMakeScale(self.options.contentViewScale, self.options.contentViewScale)];
-	} completion:^(BOOL finished) {
-		[self disableContentInteraction];
-	}];
+    
+    CGFloat menuXOrigin = self.menuContainerView.frame.origin.x;
+    CGFloat finalXOrigin;
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        finalXOrigin = 0.0f;
+    } else {
+        finalXOrigin = self.view.bounds.size.width - self.menuContainerView.frame.size.width;
+    }
+    
+    CGRect frame = self.menuContainerView.frame;
+    frame.origin.x = finalXOrigin;
+    
+    NSTimeInterval duration;
+    if (velocity == 0.0f) {
+        duration = self.options.animationDuration;
+    } else {
+        duration = fabs((menuXOrigin - finalXOrigin) / velocity);
+        duration = fmax(0.1, fmin(1.0f, duration));
+    }
+    
+    [self addShadowToMenuView];
+    
+    [UIView animateWithDuration:duration delay:0.0f options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        self.menuContainerView.frame = frame;
+        self.opacityView.layer.opacity = self.options.contentViewOpacity;
+        [self.contentContainerView setTransform:CGAffineTransformMakeScale(self.options.contentViewScale, self.options.contentViewScale)];
+    } completion:^(BOOL finished) {
+        [self disableContentInteraction];
+    }];
 }
 
 - (void)closeMenuWithVelocity:(CGFloat)velocity {
@@ -460,13 +527,17 @@ typedef struct {
 }
 
 -(BOOL)isPointContainedWithinBezelRect:(CGPoint)point {
-    CGRect leftBezelRect;
+    CGRect bezelRect;
     CGRect tempRect;
-	CGFloat bezelWidth = self.options.bezelWidth;
-	
-    CGRectDivide(self.view.bounds, &leftBezelRect, &tempRect, bezelWidth, CGRectMinXEdge);
+    CGFloat bezelWidth = self.options.bezelWidth;
     
-    return CGRectContainsPoint(leftBezelRect, point);
+    if (self.options.openDirection == MVYSideMenuOpenDirectionFromLeft) {
+        CGRectDivide(self.view.bounds, &bezelRect, &tempRect, bezelWidth, CGRectMinXEdge);
+    } else {
+        CGRectDivide(self.view.bounds, &bezelRect, &tempRect, bezelWidth, CGRectMaxXEdge);
+    }
+    
+    return CGRectContainsPoint(bezelRect, point);
 }
 
 - (BOOL)isPointContainedWithinMenuRect:(CGPoint)point {
@@ -518,6 +589,10 @@ typedef struct {
 	}
 	
 	return YES;
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 @end
