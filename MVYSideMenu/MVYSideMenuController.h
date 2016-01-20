@@ -9,8 +9,31 @@
 #import <UIKit/UIKit.h>
 #import "MVYSideMenuOptions.h"
 
+@class MVYSideMenuController;
+
+/** A protocol for the MVYSideMenuController delegate */
+@protocol MVYSideMenuControllerDelegate <NSObject>
+
+@optional
+
+/** Called on the delegate when the side menu is about to be opened. */
+- (void)willOpenSideMenuController:(MVYSideMenuController *)sideMenuController;
+
+/** Called on the delegate when the side menu is about to be closed */
+- (void)willCloseSideMenuController:(MVYSideMenuController *)sideMenuController;
+
+/** Called on the delegate when the side menu was opened. */
+- (void)didOpenSideMenuController:(MVYSideMenuController *)sideMenuController;
+
+/** Called on the delegate when the side menu was closed. */
+- (void)didCloseSideMenuController:(MVYSideMenuController *)sideMenuController;
+
+@end
+
 /** View controller that allow  */
 @interface MVYSideMenuController : UIViewController
+
+@property (nonatomic, weak) id<MVYSideMenuControllerDelegate> delegate;
 
 /** View controller showed as menu view @see changeMenuViewController:closeMenu: */
 @property (nonatomic, strong, readonly) UIViewController *menuViewController;
