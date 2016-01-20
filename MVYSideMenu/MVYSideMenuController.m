@@ -91,7 +91,7 @@ typedef struct {
     }
 }
 
-- (NSUInteger)supportedInterfaceOrientations {
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
     if (self.contentViewController) {
         return [self.contentViewController supportedInterfaceOrientations];
     } else {
@@ -535,12 +535,6 @@ typedef struct {
         viewController = viewController.parentViewController;
     }
     return nil;
-}
-
-- (void)addLeftMenuButtonWithImage:(UIImage *)buttonImage {
-	
-	UIBarButtonItem *menuButton = [[UIBarButtonItem alloc] initWithImage:buttonImage style:UIBarButtonItemStyleBordered target:self action:@selector(toggleMenu)];
-	self.navigationItem.leftBarButtonItem = menuButton;
 }
 
 - (void)toggleMenu {
