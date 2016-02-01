@@ -28,7 +28,6 @@ typedef struct {
 @property (strong, nonatomic) UIView *contentContainerView;
 @property (strong, nonatomic) UIView *menuContainerView;
 @property (strong, nonatomic) UIView *opacityView;
-@property (strong, nonatomic) UIPanGestureRecognizer *panGesture;
 @property (strong, nonatomic) UITapGestureRecognizer *tapGesture;
 
 @end
@@ -604,6 +603,10 @@ typedef struct {
 	}
 	
 	return YES;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    return YES;
 }
 
 - (void)dealloc {

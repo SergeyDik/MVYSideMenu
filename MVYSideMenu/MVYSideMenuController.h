@@ -33,6 +33,8 @@
 /** View controller that allow  */
 @interface MVYSideMenuController : UIViewController
 
+@property (nonatomic, strong, readonly) UIPanGestureRecognizer *panGesture;
+
 @property (nonatomic, weak) id<MVYSideMenuControllerDelegate> delegate;
 
 /** View controller showed as menu view @see changeMenuViewController:closeMenu: */
