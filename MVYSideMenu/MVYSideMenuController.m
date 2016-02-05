@@ -39,6 +39,7 @@ typedef struct {
 	self = [super initWithCoder:aDecoder];
 	if (self) {
 		_options = [[MVYSideMenuOptions alloc] init];
+        _isOpen = NO;
 	}
 	
 	return self;
@@ -61,6 +62,7 @@ typedef struct {
 		_options = options;
 		_menuViewController = menuViewController;
 		_contentViewController = contentViewController;
+        _isOpen = NO;
         
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(onEnterBackground)
@@ -123,6 +125,21 @@ typedef struct {
     }
 }
 
+- (BOOL)prefersStatusBarHidden {
+    if (self.contentViewController) {
+        return [self.contentViewController prefersStatusBarHidden];
+    } else {
+        return [super prefersStatusBarHidden];
+    }
+}
+
+- (UIStatusBarAnimation)preferredStatusBarUpdateAnimation {
+    if (self.contentViewController) {
+        return [self.contentViewController preferredStatusBarUpdateAnimation];
+    } else {
+        return [super preferredStatusBarUpdateAnimation];
+    }
+}
 #pragma mark – Setters
 
 - (void)setMenuFrame:(CGRect)menuFrame {
@@ -469,6 +486,8 @@ typedef struct {
     
     [self addShadowToMenuView];
     
+    _isOpen = YES;
+    
     if ([self.delegate respondsToSelector:@selector(willOpenSideMenuController:)]) {
         [self.delegate willOpenSideMenuController:self];
     }
@@ -479,6 +498,7 @@ typedef struct {
         [self.contentContainerView setTransform:CGAffineTransformMakeScale(self.options.contentViewScale, self.options.contentViewScale)];
     } completion:^(BOOL finished) {
         [self disableContentInteraction];
+        _isOpen = YES;
         if ([self.delegate respondsToSelector:@selector(didOpenSideMenuController:)]) {
             [self.delegate didOpenSideMenuController:self];
         }
@@ -501,6 +521,8 @@ typedef struct {
 		duration = fmax(0.1, fmin(1.0f, duration));
 	}
 	
+    _isOpen = NO;
+    
     if ([self.delegate respondsToSelector:@selector(willCloseSideMenuController:)]) {
         [self.delegate willCloseSideMenuController:self];
     }
@@ -512,6 +534,8 @@ typedef struct {
 	} completion:^(BOOL finished) {
 		[self removeMenuShadow];
 		[self enableContentInteraction];
+        
+        _isOpen = NO;
         
         if ([self.delegate respondsToSelector:@selector(didCloseSideMenuController:)]) {
             [self.delegate didCloseSideMenuController:self];

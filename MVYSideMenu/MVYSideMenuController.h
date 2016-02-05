@@ -35,6 +35,8 @@
 
 @property (nonatomic, strong, readonly) UIPanGestureRecognizer *panGesture;
 
+@property (nonatomic, assign, readonly) BOOL isOpen;
+
 @property (nonatomic, weak) id<MVYSideMenuControllerDelegate> delegate;
 
 /** View controller showed as menu view @see changeMenuViewController:closeMenu: */
