@@ -638,10 +638,17 @@ typedef struct {
 @implementation UIViewController (MVYSideMenuController)
 
 - (MVYSideMenuController *)sideMenuController {
+
+	UIViewController *viewController = self;
+	
+    while (viewController) {
+        if ([viewController isKindOfClass:[MVYSideMenuController class]])
+            return (MVYSideMenuController *)viewController;
+        
+        viewController = viewController.parentViewController;
+    }
     
-    UIViewController *rootViewController = [[UIApplication sharedApplication].delegate window].rootViewController;
-    
-    return [rootViewController isKindOfClass:[MVYSideMenuController class]] ? rootViewController : nil;
+    return [UIApplication sharedApplication].keyWindow.rootViewController;
 }
 
 - (void)toggleMenu {
